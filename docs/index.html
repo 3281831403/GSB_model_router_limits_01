@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>model-router-python</title>
+<meta name="description" content="Send every prompt to the cheapest model that can actually do the job. Limit-aware LLM routing powered by Jev, with live pricing and zero dependencies.">
+<meta property="og:title" content="model-router-python">
+<meta property="og:description" content="Limit-aware LLM routing powered by Jev. Live pricing, zero dependencies.">
+<meta property="og:image" content="https://raw.githubusercontent.com/TheCoder30ec4/model_router_python/main/docs/logo.svg">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<script>try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Palette taken from docs/logo.svg */
+  :root {
+    --indigo-900: #312e81;
+    --indigo-300: #a5b4fc;
+    --indigo-200: #c7d2fe;
+    --teal-700: #0f766e;
+    --teal-300: #5eead4;
+    --teal-900: #0f3d3a;
+
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --surface-2: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #475569;
+    --accent: #0f766e;
+    --accent-2: #312e81;
+    --accent-soft: #ccfbf1;
+    --link: #0f766e;
+    --code-bg: #0b1026;
+    --code-text: #e2e8f0;
+    --shadow: 0 1px 2px rgb(15 23 42 / .06), 0 8px 24px rgb(15 23 42 / .06);
+    --hero: linear-gradient(135deg, #312e81 0%, #1e3a8a 45%, #0f766e 100%);
+    --ok: #15803d;
+    --warn-bg: #fffbeb;
+    --warn-border: #f59e0b;
+    --warn-text: #78350f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a0f1f;
+      --surface: #111830;
+      --surface-2: #161f3d;
+      --border: #25305a;
+      --text: #e2e8f0;
+      --muted: #a3b0cc;
+      --accent: #5eead4;
+      --accent-2: #a5b4fc;
+      --accent-soft: rgb(94 234 212 / .12);
+      --link: #5eead4;
+      --code-bg: #070b18;
+      --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 24px rgb(0 0 0 / .35);
+      --ok: #4ade80;
+      --warn-bg: rgb(245 158 11 / .1);
+      --warn-border: #f59e0b;
+      --warn-text: #fcd34d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a0f1f;
+    --surface: #111830;
+    --surface-2: #161f3d;
+    --border: #25305a;
+    --text: #e2e8f0;
+    --muted: #a3b0cc;
+    --accent: #5eead4;
+    --accent-2: #a5b4fc;
+    --accent-soft: rgb(94 234 212 / .12);
+    --link: #5eead4;
+    --code-bg: #070b18;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 8px 24px rgb(0 0 0 / .35);
+    --ok: #4ade80;
+    --warn-bg: rgb(245 158 11 / .1);
+    --warn-border: #f59e0b;
+    --warn-text: #fcd34d;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { text-decoration-thickness: 2px; }
+  code, pre, kbd { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  :not(pre) > code {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .1em .35em;
+    font-size: .88em;
+    overflow-wrap: anywhere;
+  }
+  :focus-visible { outline: 3px solid var(--teal-300); outline-offset: 2px; border-radius: 4px; }
+
+  /* Header */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    max-width: 1200px; margin: 0 auto; padding: 12px 16px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); text-decoration: none; }
+  .brand img { width: 32px; height: 32px; }
+  .topnav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+  .topnav a {
+    color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500;
+    padding: 6px 10px; border-radius: 8px;
+  }
+  .topnav a:hover { color: var(--text); background: var(--surface-2); }
+  .icon-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+    display: inline-grid; place-items: center;
+  }
+  .icon-btn svg { width: 18px; height: 18px; }
+  @media (max-width: 720px) { .topnav a.hide-sm { display: none; } }
+
+  /* Hero */
+  .hero { background: var(--hero); color: #fff; position: relative; overflow: hidden; }
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(600px 300px at 85% 20%, rgb(94 234 212 / .25), transparent 70%),
+                radial-gradient(500px 300px at 10% 90%, rgb(165 180 252 / .2), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-inner {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 0 auto; padding: 72px 16px 64px;
+    display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 48px; align-items: center;
+  }
+  .hero-inner > * { min-width: 0; }
+  @media (max-width: 900px) { .hero-inner { grid-template-columns: minmax(0, 1fr); padding-top: 48px; gap: 32px; } }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgb(255 255 255 / .12); border: 1px solid rgb(255 255 255 / .2);
+    padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 500;
+  }
+  .eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal-300); box-shadow: 0 0 0 4px rgb(94 234 212 / .25); }
+  .hero h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.08; letter-spacing: -.02em; margin: 18px 0 16px; font-weight: 800; }
+  .hero h1 .hl { color: var(--teal-300); }
+  .hero p.lead { font-size: 18px; color: #dbe4ff; max-width: 36em; margin: 0 0 28px; }
+  .install {
+    display: flex; align-items: center; gap: 12px;
+    background: rgb(7 11 24 / .55); border: 1px solid rgb(255 255 255 / .15);
+    border-radius: 12px; padding: 10px 10px 10px 16px; max-width: 460px;
+    font-family: "JetBrains Mono", monospace; font-size: 15px;
+  }
+  .install .prompt { color: var(--teal-300); user-select: none; }
+  .install code { flex: 1; color: #fff; overflow-x: auto; white-space: nowrap; background: none; border: 0; padding: 0; font-size: inherit; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 15px; text-decoration: none;
+    border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--teal-300); color: var(--teal-900); }
+  .btn-primary:hover { background: #99f6e4; }
+  .btn-ghost { color: #fff; border-color: rgb(255 255 255 / .3); }
+  .btn-ghost:hover { background: rgb(255 255 255 / .1); }
+  .btn svg { width: 18px; height: 18px; }
+
+  .hero-card {
+    background: rgb(7 11 24 / .6); border: 1px solid rgb(255 255 255 / .15);
+    border-radius: 16px; padding: 18px; box-shadow: 0 20px 60px rgb(0 0 0 / .3);
+  }
+  .route-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center;
+    padding: 12px 14px; border-radius: 10px; background: rgb(255 255 255 / .05);
+    border: 1px solid rgb(255 255 255 / .08);
+  }
+  .route-row + .route-row { margin-top: 10px; }
+  .route-task { font-size: 14px; color: #dbe4ff; }
+  .route-model {
+    grid-column: 1 / -1; font-family: "JetBrains Mono", monospace; font-size: 13px;
+    color: var(--teal-300); display: flex; align-items: center; gap: 8px;
+  }
+  .route-model::before { content: "→"; color: var(--indigo-300); }
+  .tag {
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+    background: rgb(94 234 212 / .15); color: var(--teal-300);
+  }
+  .tag.strong { background: rgb(165 180 252 / .18); color: var(--indigo-200); }
+  .hero-card .caption { font-size: 12px; color: #a3b0cc; margin: 12px 2px 0; }
+
+  .stats {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 0 auto; padding: 0 16px 40px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  }
+  @media (max-width: 800px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .stat { background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .12); border-radius: 12px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 24px; letter-spacing: -.01em; }
+  .stat span { font-size: 13px; color: #c7d2fe; }
+
+  /* Layout */
+  .layout { max-width: 1200px; margin: 0 auto; padding: 0 16px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+  @media (max-width: 1000px) { .layout { grid-template-columns: minmax(0, 1fr); } .toc { display: none; } }
+  .toc { position: sticky; top: 76px; align-self: start; padding: 40px 0; max-height: calc(100vh - 76px); overflow-y: auto; }
+  .toc h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+  .toc a {
+    display: block; padding: 6px 12px; border-left: 2px solid var(--border);
+    color: var(--muted); text-decoration: none; font-size: 14px;
+  }
+  .toc a:hover { color: var(--text); }
+  .toc a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+  main { padding: 40px 0 80px; min-width: 0; }
+  section { padding-top: 16px; margin-bottom: 56px; }
+  h2.sec { font-size: 30px; letter-spacing: -.015em; margin: 0 0 8px; line-height: 1.2; }
+  h3 { font-size: 20px; margin: 32px 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 46em; }
+  .kicker { color: var(--accent); font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 6px; }
+
+  .grid { display: grid; gap: 16px; }
+  .grid.c3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.c2 { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 860px) { .grid.c3, .grid.c2 { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; box-shadow: var(--shadow); min-width: 0;
+  }
+  .card h4 { margin: 10px 0 6px; font-size: 17px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .card .ico {
+    width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .card .ico svg { width: 22px; height: 22px; }
+
+  /* Pipeline */
+  .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+  .pipeline .arrow { display: none; }
+  .step { position: relative; }
+  .step .num {
+    width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--indigo-900), var(--teal-700)); color: #fff; font-weight: 700; font-size: 14px;
+  }
+  .step ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+
+  /* Code */
+  .code { position: relative; margin: 16px 0; }
+  .code .label {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #111a36; color: #a3b0cc; font-size: 12px; font-family: "JetBrains Mono", monospace;
+    padding: 8px 12px; border-radius: 12px 12px 0 0; border: 1px solid #1e2a52; border-bottom: 0;
+  }
+  pre {
+    margin: 0; background: var(--code-bg); color: var(--code-text);
+    padding: 16px; border-radius: 0 0 12px 12px; overflow-x: auto;
+    font-size: 14px; line-height: 1.6; border: 1px solid #1e2a52;
+  }
+  .code.plain pre { border-radius: 12px; padding-right: 76px; }
+  .copy {
+    background: transparent; border: 1px solid #2a3766; color: #c7d2fe; border-radius: 6px;
+    font: 500 12px Inter, sans-serif; padding: 3px 10px; cursor: pointer;
+  }
+  .copy:hover { background: #1b2750; }
+  .copy.done { color: var(--teal-300); border-color: var(--teal-300); }
+  .code.plain .copy { position: absolute; top: 8px; right: 8px; background: #111a36; }
+  /* Syntax colors (highlight.js classes), tuned to the logo palette */
+  .hljs-keyword, .hljs-built_in { color: #a5b4fc; }
+  .hljs-string { color: #5eead4; }
+  .hljs-comment { color: #7c89b0; font-style: italic; }
+  .hljs-number, .hljs-literal { color: #fbbf24; }
+  .hljs-title, .hljs-title.function_, .hljs-title.class_ { color: #93c5fd; }
+  .hljs-params, .hljs-attr { color: #e2e8f0; }
+  .hljs-meta { color: #f0abfc; }
+
+  /* Tabs */
+  .tabs { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+  .tablist { display: flex; border-bottom: 1px solid var(--border); background: var(--surface-2); overflow-x: auto; }
+  .tablist button {
+    flex: 1; min-width: 200px; border: 0; background: transparent; color: var(--muted); cursor: pointer;
+    padding: 14px 16px; font: 600 15px Inter, sans-serif; border-bottom: 3px solid transparent; text-align: left;
+  }
+  .tablist button small { display: block; font-weight: 400; font-size: 13px; }
+  .tablist button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); background: var(--surface); }
+  .tabpanel { padding: 20px; }
+  .tabpanel[hidden] { display: none; }
+  .tabpanel p { margin-top: 0; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--surface-2); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Use cases */
+  .usecase .saving { font-size: 30px; font-weight: 800; color: var(--accent); letter-spacing: -.02em; margin-top: 8px; }
+  .usecase .saving small { font-size: 15px; font-weight: 600; color: var(--muted); }
+  .bars { margin: 14px 0 6px; display: grid; gap: 6px; }
+  .bar { display: grid; grid-template-columns: 70px 1fr 56px; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+  .bar .track { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .bar .fill { height: 100%; border-radius: 999px; background: #94a3b8; }
+  .bar .fill.routed { background: linear-gradient(90deg, var(--indigo-900), var(--teal-700)); }
+  :root[data-theme="dark"] .bar .fill.routed { background: linear-gradient(90deg, #6366f1, var(--teal-300)); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .bar .fill.routed { background: linear-gradient(90deg, #6366f1, var(--teal-300)); } }
+  .bar b { color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
+  .note { font-size: 13px; color: var(--muted); }
+
+  .callout {
+    border: 1px solid var(--warn-border); border-left-width: 4px; background: var(--warn-bg); color: var(--warn-text);
+    border-radius: 10px; padding: 12px 16px; margin: 16px 0; font-size: 15px;
+  }
+  .callout strong { color: inherit; }
+
+  ul.checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  ul.checks li { padding-left: 30px; position: relative; }
+  ul.checks li::before {
+    content: ""; position: absolute; left: 0; top: 4px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%230f766e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 10.5l3 3 7-7'/%3E%3C/svg%3E") center / 12px no-repeat;
+  }
+
+  .cta {
+    background: var(--hero); color: #fff; border-radius: 18px; padding: 32px;
+    display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between;
+  }
+  .cta h2 { margin: 0 0 6px; font-size: 26px; }
+  .cta p { margin: 0; color: #dbe4ff; max-width: 36em; }
+
+  footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+  footer .inner { max-width: 1200px; margin: 0 auto; padding: 24px 16px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
+  footer a { color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#top" aria-label="model-router-python home">
+      <img src="logo.svg" alt="" width="32" height="32">
+      <span>model-router-python</span>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      <a class="hide-sm" href="#quickstart">Quick start</a>
+      <a class="hide-sm" href="#api">API</a>
+      <a class="hide-sm" href="#costs">Costs</a>
+      <a href="https://github.com/TheCoder30ec4/model_router_python" aria-label="GitHub repository">GitHub</a>
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<div class="hero" id="top">
+  <div class="hero-inner">
+    <div>
+      <span class="eyebrow"><span class="dot"></span> Limit-aware LLM routing, powered by Jev</span>
+      <h1>Send every prompt to the <span class="hl">cheapest model</span> that can actually do the job.</h1>
+      <p class="lead">You list the models or providers you can use. For each task, model-router-python rules out models that can't fit it or afford it, using live prices, then lets Jev pick the most efficient one. Pure Python, zero dependencies.</p>
+      <div class="install" role="group" aria-label="Install command">
+        <span class="prompt">$</span><code id="install-cmd">pip install model-router-python</code>
+        <button class="copy" type="button" data-copy="#install-cmd">Copy</button>
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="#quickstart">Get started
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-ghost" href="https://github.com/TheCoder30ec4/model_router_python">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg>
+          Star on GitHub</a>
+      </div>
+    </div>
+
+    <div class="hero-card" aria-label="Example routing decisions">
+      <div class="route-row">
+        <span class="route-task">"Translate 'good morning' into French."</span><span class="tag">cheap</span>
+        <span class="route-model">openai/gpt-6-luna</span>
+      </div>
+      <div class="route-row">
+        <span class="route-task">"Summarize this email in one sentence."</span><span class="tag">cheap</span>
+        <span class="route-model">openai/gpt-oss-20b</span>
+      </div>
+      <div class="route-row">
+        <span class="route-task">"Design a lock-free hash map in Rust and prove it's linearizable."</span><span class="tag strong">strong</span>
+        <span class="route-model">anthropic/claude-opus-5.5</span>
+      </div>
+      <p class="caption">Real routing decisions from the repo's examples, run against live APIs.</p>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>58–92%</b><span>cost saved in the example workloads</span></div>
+    <div class="stat"><b>0</b><span>runtime dependencies (stdlib only)</span></div>
+    <div class="stat"><b>~$0.00003</b><span>per routing call with a 3-model list</span></div>
+    <div class="stat"><b>Live</b><span>prices &amp; limits, cached for 24h</span></div>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <a href="#what">What it is</a>
+    <a href="#why">Why use it</a>
+    <a href="#how">How it works</a>
+    <a href="#quickstart">Quick start</a>
+    <a href="#configure">Configure</a>
+    <a href="#live-data">Live model data</a>
+    <a href="#api">API reference</a>
+    <a href="#agents">Using it in agents</a>
+    <a href="#costs">Costs</a>
+    <a href="#use-cases">Use cases</a>
+    <a href="#limitations">Limitations</a>
+    <a href="#contribute">Contribute</a>
+  </aside>
+
+  <main>
+    <section id="what">
+      <p class="kicker">Overview</p>
+      <h2 class="sec">What it is</h2>
+      <p class="sub"><code>model-router-python</code> is a small Python library that answers one question for every LLM call: <strong>which model should handle this?</strong> It returns a model id. You then call that model however you already do.</p>
+      <div class="code">
+        <div class="label"><span>python</span><button class="copy" type="button">Copy</button></div>
+<pre><code class="language-python">from model_router import Router
+
+router = Router(
+    openrouter_api_key="sk-or-...",              # or jev_api_key="jev_..."
+    providers=["openai", "anthropic", "google"],   # every current model from these
+)
+
+router.route("Translate 'good morning' into French.")
+# -> "openai/gpt-6-luna"
+
+router.route("Design a lock-free hash map in Rust and prove it's linearizable.")
+# -> "anthropic/claude-opus-5.5"</code></pre>
+      </div>
+    </section>
+
+    <section id="why">
+      <p class="kicker">The problem</p>
+      <h2 class="sec">Why use it</h2>
+      <p class="sub">Most apps and agents send <em>every</em> request to one flagship model, but most requests are routine: extract a field, rephrase a sentence, answer an FAQ. Flagship models cost <strong>up to 40× more per token</strong> than small ones.</p>
+      <div class="grid c3">
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <h4>Stop overpaying</h4>
+          <p>Easy prompts go to models that cost a fraction as much. Hard ones still reach a strong model.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
+          <h4>No failed calls</h4>
+          <p>Models whose context window or output limit is too small are ruled out before any call is made.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></div>
+          <h4>Always current</h4>
+          <p>New models and price changes are picked up from live data. No code changes, no hand-maintained model tables.</p>
+        </div>
+      </div>
+
+      <h3>Where to use it</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Where</th><th>How it helps</th></tr></thead>
+          <tbody>
+            <tr><td><strong>AI agents</strong></td><td>Route each step separately. Planning and debugging go to a strong model; summarizing, formatting and parsing tool output go to a cheap one.</td></tr>
+            <tr><td><strong>Chatbots &amp; support</strong></td><td>Most messages are simple, and the few hard ones are escalated to a strong model automatically.</td></tr>
+            <tr><td><strong>Batch &amp; ETL pipelines</strong></td><td>Extraction, classification and tagging over thousands of documents, with a hard cost cap on each call.</td></tr>
+            <tr><td><strong>Multi-provider apps</strong></td><td>Get the best-value model across OpenAI, Anthropic, Google and others, not one vendor's lineup.</td></tr>
+            <tr><td><strong>Cost-sensitive products</strong></td><td>Free tiers and high-volume endpoints where a fraction of a cent per request adds up.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="how">
+      <p class="kicker">Under the hood</p>
+      <h2 class="sec">How it works</h2>
+      <p class="sub">Each <code>route()</code> call runs three steps. The first is free and runs locally. The second is skipped when only one model is left.</p>
+      <div class="pipeline">
+        <div class="card step">
+          <div class="num">1</div>
+          <h4>Your task</h4>
+          <p>A prompt from a user or an agent step, plus optional <code>Limits</code>.</p>
+        </div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="card step">
+          <div class="num">2</div>
+          <h4>Filter locally</h4>
+          <ul>
+            <li>Context window fits input + output</li>
+            <li>Max output ≥ what you need</li>
+            <li>Estimated cost ≤ your budget</li>
+          </ul>
+        </div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="card step">
+          <div class="num">3</div>
+          <h4>Jev decides</h4>
+          <p>The remaining models go to Jev with live prices and limits, and Jev picks the most efficient fit.</p>
+        </div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="card step">
+          <div class="num">4</div>
+          <h4>Model id</h4>
+          <p><code>"openai/gpt-6-luna"</code>. Call it with your own client.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="quickstart">
+      <p class="kicker">Get going in a minute</p>
+      <h2 class="sec">Quick start</h2>
+      <p class="sub">Requires Python 3.12+. You pass every key in code, so no <code>.env</code> file or environment variable is required.</p>
+      <div class="code plain">
+<pre><code class="language-bash">pip install model-router-python      # or: uv add model-router-python</code></pre>
+        <button class="copy" type="button">Copy</button>
+      </div>
+      <div class="code">
+        <div class="label"><span>python</span><button class="copy" type="button">Copy</button></div>
+<pre><code class="language-python">from model_router import Router, Limits
+
+router = Router(
+    openrouter_api_key="sk-or-...",
+    models=["anthropic/claude-opus-5.5", "openai/gpt-6-luna", "google/gemini-3.5-flash-lite"],
+)
+
+model = router.route("Summarize this paragraph: ...")
+
+# Per-call limits: how much output you expect, and a hard cost cap in USD
+model = router.route("Write a detailed design doc ...", Limits(output_tokens=4000, max_cost_usd=0.05))</code></pre>
+      </div>
+    </section>
+
+    <section id="configure">
+      <p class="kicker">Two setups</p>
+      <h2 class="sec">Configure</h2>
+      <p class="sub">Pick <strong>one routing key</strong>, then tell the router which models it may choose from.</p>
+
+      <div class="tabs">
+        <div class="tablist" role="tablist" aria-label="Configuration options">
+          <button role="tab" id="tab-a" aria-controls="panel-a" aria-selected="true">Option A · Jev key<small>+ your own provider keys</small></button>
+          <button role="tab" id="tab-b" aria-controls="panel-b" aria-selected="false" tabindex="-1">Option B · OpenRouter key<small>one key, one bill</small></button>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="panel-a" aria-labelledby="tab-a">
+          <p>Routing runs on Jev's model-route API. Pass the providers you already pay for. The router returns your key for whichever model it picks, so you call that provider directly.</p>
+          <div class="code">
+            <div class="label"><span>python</span><button class="copy" type="button">Copy</button></div>
+<pre><code class="language-python">router = Router(
+    jev_api_key="jev_...",                       # from jevai.org/agent/keys
+    providers={
+        "openai": "sk-...",
+        "anthropic": "sk-ant-...",
+    },
+)
+
+model = router.route(task)          # e.g. "openai/gpt-6-luna"
+key = router.api_key_for(model)     # your OpenAI key</code></pre>
+          </div>
+          <p class="note">Rather not hand the router your provider keys? Pass just the names: <code>providers=["openai", "anthropic"]</code>. Provider keys are never sent over the network.</p>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="panel-b" aria-labelledby="tab-b" hidden>
+          <p>Routing runs on Jev through OpenRouter's decisions API. OpenRouter can call every provider's models, so the same key also runs the chosen model.</p>
+          <div class="code">
+            <div class="label"><span>python</span><button class="copy" type="button">Copy</button></div>
+<pre><code class="language-python">router = Router(
+    openrouter_api_key="sk-or-...",              # from openrouter.ai/keys
+    providers=["openai", "anthropic", "google"],   # which providers are allowed
+)</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <h3>Choosing candidate models</h3>
+      <div class="grid c2">
+        <div class="card">
+          <h4><code>providers=[...]</code></h4>
+          <p>Every current model from those providers. <code>:batch</code> and <code>:free</code> variants are skipped, and so are models scheduled for retirement. Narrow the list with <code>models_per_provider=N</code> (newest first).</p>
+        </div>
+        <div class="card">
+          <h4><code>models=[...]</code></h4>
+          <p>An exact list of OpenRouter-style ids. This replaces the automatic pick and gives you the shortest, cheapest routing requests.</p>
+        </div>
+      </div>
+      <p class="note">If you pass both <code>jev_api_key</code> and <code>openrouter_api_key</code>, routing goes through Jev directly.</p>
+    </section>
+
+    <section id="live-data">
+      <p class="kicker">Always up to date</p>
+      <h2 class="sec">Live model data</h2>
+      <p class="sub">Every candidate is sent to Jev as one compact line of live data from OpenRouter's public model list:</p>
+      <div class="code plain">
+<pre><code class="language-plaintext">anthropic/claude-opus-5.5 | $4.00/M in, $20.00/M out | context 1000000 | max output 128000 | est. $0.020500 for this task | Claude Opus 5.5 is Anthropic's flagship…</code></pre>
+        <button class="copy" type="button">Copy</button>
+      </div>
+      <ul class="checks">
+        <li><strong>Fetched once, not per request.</strong> The list is downloaded when the first <code>Router</code> is created, then shared by every router in the process for 24 hours. Call <code>refresh_catalog()</code> to download it again.</li>
+        <li><strong>No key needed for pricing.</strong> Providers' own APIs don't publish prices, so prices, context sizes and output limits come from OpenRouter's public list. This works with either option.</li>
+        <li><strong>Fits Jev's 32 KiB request limit.</strong> Descriptions shrink automatically when there are many candidates, but prices and limits are always kept. Three full providers (102 models) come to about 24 KB.</li>
+      </ul>
+    </section>
+
+    <section id="api">
+      <p class="kicker">Reference</p>
+      <h2 class="sec">API reference</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Call</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>Router(*, jev_api_key=None, openrouter_api_key=None, providers=None, models=None, limits=Limits(), models_per_provider=None)</code></td><td>Keyword-only. Loads live model data (cached for 24h) and works out the candidate list. Raises <code>UnknownModelError</code> for unknown model ids or providers.</td></tr>
+            <tr><td><code>router.route(task, limits=None) → str</code></td><td>The best model id for <code>task</code>.</td></tr>
+            <tr><td><code>router.fitting(task, limits=None) → list[ModelInfo]</code></td><td>The models that pass the limits, without calling Jev (free).</td></tr>
+            <tr><td><code>router.api_key_for(model_id) → str | None</code></td><td>The key you passed in <code>providers={...}</code> for that model's provider.</td></tr>
+            <tr><td><code>Limits(output_tokens=1024, max_cost_usd=None)</code></td><td>The output size you expect and an optional cost cap for each call.</td></tr>
+            <tr><td><code>refresh_catalog()</code></td><td>Clears the cached model list, so the next <code>Router</code> downloads fresh prices.</td></tr>
+            <tr><td><code>ModelInfo</code></td><td>One model's data: id, context length, max output, prices per token, description.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Errors</h3>
+      <p>All errors are subclasses of <code>RouterError</code>, so one <code>except</code> clause covers every routing failure.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Exception</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td><code>NoModelFitsError</code></td><td>No model passes the limits. The message gives the reason for each model.</td></tr>
+            <tr><td><code>UnknownModelError</code></td><td>A model id or provider isn't in the catalog.</td></tr>
+            <tr><td><code>RouterError</code></td><td>No routing key, a network or HTTP failure, or an error returned by Jev (e.g. a rate limit).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="agents">
+      <p class="kicker">Patterns</p>
+      <h2 class="sec">Using it in agents</h2>
+      <p class="sub">Route <strong>every</strong> LLM call separately. A planning step and a formatting step rarely need the same model. Keep a fallback so a routing outage never stalls the agent.</p>
+      <div class="code">
+        <div class="label"><span>python</span><button class="copy" type="button">Copy</button></div>
+<pre><code class="language-python">from model_router import Limits, NoModelFitsError, RouterError
+
+FALLBACK = "openai/gpt-6-luna"
+
+def pick(router, prompt, limits):
+    try:
+        return router.route(prompt, limits)
+    except NoModelFitsError:
+        raise                 # input too large for every model: shrink it
+    except RouterError:
+        return FALLBACK       # Jev down or rate limited: keep going
+
+# Multi-turn chat: route on the whole transcript so the context check grows with it
+transcript = "\n".join(f"{m['role']}: {m['content']}" for m in messages)
+model = pick(router, transcript, Limits(output_tokens=2000))</code></pre>
+      </div>
+      <p>The repo's <a href="https://github.com/TheCoder30ec4/model_router_python/blob/main/examples/agent.py"><code>examples/agent.py</code></a> shows plan-and-execute with a total budget spread across the steps, and a chat that switches to a stronger model when the question gets hard.</p>
+    </section>
+
+    <section id="costs">
+      <p class="kicker">Transparent pricing</p>
+      <h2 class="sec">Costs</h2>
+      <h3>The router itself</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Item</th><th class="num">Cost</th></tr></thead>
+          <tbody>
+            <tr><td>Loading model data, and limit filtering</td><td class="num">Free</td></tr>
+            <tr><td>Only one model passes the limits (Jev is skipped)</td><td class="num">Free</td></tr>
+            <tr><td>One routing call via OpenRouter, 3 models (measured)</td><td class="num">$0.000027</td></tr>
+            <tr><td>One routing call via OpenRouter, 102 models from 3 providers (measured)</td><td class="num">$0.00045</td></tr>
+            <tr><td>1,000 routing calls (3 models / 102 models)</td><td class="num">$0.027 / $0.45</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Routing cost grows with the number of candidates, because Jev reads each model's price and limits every time. For high-volume traffic, pass a short <code>models=[...]</code> list. Only the first 8,000 characters of a task are sent, so a single routing call costs at most about $0.0001 extra however long the prompt.</p>
+
+      <h3>The models it picks between</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Model</th><th class="num">Input / 1M</th><th class="num">Output / 1M</th><th class="num">Context</th></tr></thead>
+          <tbody>
+            <tr><td><code>anthropic/claude-opus-5.5</code></td><td class="num">$4.00</td><td class="num">$20.00</td><td class="num">1M</td></tr>
+            <tr><td><code>google/gemini-3.5-flash-lite</code></td><td class="num">$0.30</td><td class="num">$2.50</td><td class="num">1M</td></tr>
+            <tr><td><code>openai/gpt-6-luna</code></td><td class="num">$0.10</td><td class="num">$0.50</td><td class="num">1M</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">OpenRouter prices, September 2026. The router always uses live prices, not this table.</p>
+    </section>
+
+    <section id="use-cases">
+      <p class="kicker">Real-world estimates</p>
+      <h2 class="sec">Use cases</h2>
+      <p class="sub">All-flagship vs. routed, using the prices above plus the cost of routing. <strong>The share of easy vs. hard tasks is an assumption</strong>, so measure it on your own traffic before relying on these numbers.</p>
+      <div class="grid c3">
+        <div class="card usecase">
+          <h4>Customer support bot</h4>
+          <p>100k messages/month, ~800 in + 300 out tokens. 85% routine, 15% need careful reasoning.</p>
+          <div class="bars" aria-label="Monthly cost: all Opus $920, routed $160">
+            <div class="bar"><span>All Opus</span><div class="track"><div class="fill" style="width:100%"></div></div><b>$920</b></div>
+            <div class="bar"><span>Routed</span><div class="track"><div class="fill routed" style="width:17.4%"></div></div><b>$160</b></div>
+          </div>
+          <div class="saving">83% <small>≈ $760/month saved</small></div>
+        </div>
+        <div class="card usecase">
+          <h4>Coding agent</h4>
+          <p>20k steps/month, ~4,000 in + 800 out tokens. 40% hard (design, debugging), 60% mechanical.</p>
+          <div class="bars" aria-label="Monthly cost: all Opus $640, routed $268">
+            <div class="bar"><span>All Opus</span><div class="track"><div class="fill" style="width:100%"></div></div><b>$640</b></div>
+            <div class="bar"><span>Routed</span><div class="track"><div class="fill routed" style="width:41.9%"></div></div><b>$268</b></div>
+          </div>
+          <div class="saving">58% <small>≈ $372/month saved</small></div>
+        </div>
+        <div class="card usecase">
+          <h4>Document extraction</h4>
+          <p>50k docs/month, ~3,000 in + 200 out tokens. 95% clean, 5% messy enough to need a strong model.</p>
+          <div class="bars" aria-label="Monthly cost: all Opus $800, routed $64">
+            <div class="bar"><span>All Opus</span><div class="track"><div class="fill" style="width:100%"></div></div><b>$800</b></div>
+            <div class="bar"><span>Routed</span><div class="track"><div class="fill routed" style="width:8%"></div></div><b>$64</b></div>
+          </div>
+          <div class="saving">92% <small>≈ $736/month saved</small></div>
+        </div>
+      </div>
+
+      <h3>Where the savings come from</h3>
+      <ul class="checks">
+        <li><strong>Cheaper tokens, not fewer tokens.</strong> Your prompt is the same size either way. Easy prompts go to models that charge up to 40× less per token.</li>
+        <li><strong>No wasted calls.</strong> Prompts that won't fit a model's context window are rejected before any request is sent.</li>
+        <li><strong>No truncated answers.</strong> Models whose output cap is below your <code>output_tokens</code> are filtered out, so you don't pay for a cut-off answer and then again for the retry.</li>
+        <li><strong>Hard cost caps.</strong> <code>max_cost_usd</code> rules out any model whose estimated cost for this call is over budget.</li>
+      </ul>
+    </section>
+
+    <section id="limitations">
+      <p class="kicker">Honest caveats</p>
+      <h2 class="sec">Limitations</h2>
+      <div class="callout"><strong>Option A (Jev key) is covered by unit tests but not yet checked against the live API.</strong> Every test call so far got HTTP 429. Option B (OpenRouter key) is verified end to end. Tracked in <a href="https://github.com/TheCoder30ec4/model_router_python/issues/11">#11</a>.</div>
+      <ul>
+        <li>Token counts are estimated at about 4 characters per token, so the context and cost checks are approximate. Leave some headroom (<a href="https://github.com/TheCoder30ec4/model_router_python/issues/15">#15</a>).</li>
+        <li>Returned ids use OpenRouter's naming. A provider's own name can differ, e.g. Anthropic's API uses <code>claude-opus-5-5</code> (<a href="https://github.com/TheCoder30ec4/model_router_python/issues/16">#16</a>).</li>
+        <li><code>route()</code> returns only the model id, not Jev's confidence (<a href="https://github.com/TheCoder30ec4/model_router_python/issues/14">#14</a>).</li>
+        <li>Routing adds one network call before each model call, except when only one model passes the limits.</li>
+      </ul>
+    </section>
+
+    <section id="contribute">
+      <div class="cta">
+        <div>
+          <h2>Help build it</h2>
+          <p>Issues are labelled by difficulty and area, and each one says what "done" looks like. Pick a <strong>good first issue</strong>, ask a question in Discussions, or open a new issue.</p>
+        </div>
+        <div class="btn-row" style="margin:0">
+          <a class="btn btn-primary" href="https://github.com/TheCoder30ec4/model_router_python/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">Good first issues</a>
+          <a class="btn btn-ghost" href="https://github.com/TheCoder30ec4/model_router_python/discussions">Discussions</a>
+          <a class="btn btn-ghost" href="https://github.com/TheCoder30ec4/model_router_python/blob/main/CONTRIBUTING.md">Contributing guide</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <div class="inner">
+    <span>model-router-python · MIT License</span>
+    <span>
+      <a href="https://github.com/TheCoder30ec4/model_router_python">GitHub</a> ·
+      <a href="https://pypi.org/project/model-router-python/">PyPI</a> ·
+      <a href="https://github.com/TheCoder30ec4/model_router_python/blob/main/CHANGELOG.md">Changelog</a> ·
+      <a href="https://github.com/TheCoder30ec4/model_router_python/blob/main/SECURITY.md">Security</a>
+    </span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+  // Syntax highlighting (page still reads fine if the CDN is blocked)
+  if (window.hljs) document.querySelectorAll("pre code").forEach((el) => hljs.highlightElement(el));
+
+  // Theme toggle; remembers the choice when storage is available
+  (function () {
+    const root = document.documentElement;
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const dark = root.dataset.theme
+        ? root.dataset.theme === "dark"
+        : matchMedia("(prefers-color-scheme: dark)").matches;
+      root.dataset.theme = dark ? "light" : "dark";
+      try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+    });
+  })();
+
+  // Copy buttons
+  document.querySelectorAll(".copy").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const target = btn.dataset.copy
+        ? document.querySelector(btn.dataset.copy)
+        : btn.closest(".code").querySelector("pre code");
+      try {
+        await navigator.clipboard.writeText(target.innerText);
+        btn.textContent = "Copied";
+        btn.classList.add("done");
+        setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("done"); }, 1500);
+      } catch (e) {
+        btn.textContent = "Press ⌘C";
+      }
+    });
+  });
+
+  // Tabs (arrow keys move between tabs)
+  (function () {
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    function select(tab) {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute("aria-selected", on);
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+      });
+    }
+    tabs.forEach((t, i) => {
+      t.addEventListener("click", () => select(t));
+      t.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+        const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+        select(next); next.focus();
+      });
+    });
+  })();
+
+  // Highlight the current section in the sidebar
+  (function () {
+    const links = new Map([...document.querySelectorAll(".toc a")].map((a) => [a.hash.slice(1), a]));
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        links.forEach((a) => a.classList.remove("active"));
+        links.get(e.target.id)?.classList.add("active");
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    document.querySelectorAll("main section[id]").forEach((s) => obs.observe(s));
+  })();
+</script>
+</body>
+</html>

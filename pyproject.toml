@@ -1,0 +1,57 @@
+[project]
+name = "model-router-python"
+version = "0.1.0"
+description = "Pick the right LLM for every task: filter by context, output and cost limits, then let Jev choose the most efficient model."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "thecoder30ec4" }]
+keywords = ["llm", "model-router", "routing", "jev", "openrouter", "openai", "anthropic", "ai-agents", "cost-optimization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/TheCoder30ec4/model_router_python"
+Documentation = "https://thecoder30ec4.github.io/model_router_python/"
+Issues = "https://github.com/TheCoder30ec4/model_router_python/issues"
+Changelog = "https://github.com/TheCoder30ec4/model_router_python/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/model_router"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "examples", "README.md", "LICENSE", "CHANGELOG.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+# Code blocks in docs are hand-aligned for reading; lint/format only .py files.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["model_router.models.Limits", "Limits"]

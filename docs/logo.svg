@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-labelledby="t">
+  <title id="t">model-router-python logo: one prompt routed to the right model</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#312e81"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="36" fill="url(#bg)"/>
+  <!-- routes: faint = not chosen, bright = chosen -->
+  <path d="M46 80 C 78 80, 82 42, 112 42" fill="none" stroke="#a5b4fc" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>
+  <path d="M46 80 C 78 80, 82 118, 112 118" fill="none" stroke="#a5b4fc" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>
+  <path d="M46 80 L 112 80" fill="none" stroke="#5eead4" stroke-width="7" stroke-linecap="round"/>
+  <!-- the prompt -->
+  <circle cx="40" cy="80" r="14" fill="#ffffff"/>
+  <circle cx="40" cy="80" r="6" fill="#312e81"/>
+  <!-- the models: small / medium / large -->
+  <circle cx="120" cy="42" r="10" fill="#c7d2fe" fill-opacity=".55"/>
+  <circle cx="120" cy="80" r="14" fill="#5eead4"/>
+  <circle cx="120" cy="118" r="18" fill="#c7d2fe" fill-opacity=".55"/>
+  <path d="M114 80 l4 4 l8 -9" fill="none" stroke="#0f3d3a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

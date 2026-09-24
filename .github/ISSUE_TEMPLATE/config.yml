@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/TheCoder30ec4/model_router_python/security/advisories/new
+    about: Please report security issues privately, not as a public issue.
+  - name: Question or idea
+    url: https://github.com/TheCoder30ec4/model_router_python/discussions
+    about: Ask questions and share how you use the router.

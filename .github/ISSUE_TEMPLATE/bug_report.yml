@@ -1,0 +1,52 @@
+name: Bug report
+description: Something doesn't work the way the docs say it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Never paste API keys** (Jev, OpenRouter, OpenAI, Anthropic, …) into an issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal code to reproduce
+      render: python
+      placeholder: |
+        from model_router import Router
+        router = Router(openrouter_api_key="...", models=["..."])
+        router.route("...")
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Error output / traceback
+      render: text
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Routing backend
+      options:
+        - jev_api_key (Jev directly)
+        - openrouter_api_key (Jev via OpenRouter)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: model-router-python version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version and OS
+      placeholder: "Python 3.12, macOS 15"
