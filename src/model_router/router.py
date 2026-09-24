@@ -46,23 +46,29 @@ class Router:
         catalog = fetch_catalog()
 
         if models:
+            models = dict.fromkeys(models)  # drop duplicate ids, keep first-seen order
             unknown = [m for m in models if m not in catalog]
             if unknown:
                 raise UnknownModelError(f"Not in OpenRouter catalog: {unknown}")
-            self.models = [catalog[m] for m in models]
+            selected = [catalog[m] for m in models]
         else:
-            self.models = []
-            for p in providers:
+            selected = []
+            for p in dict.fromkeys(providers):  # drop duplicate provider names, keep first-seen order
                 found = provider_models(catalog, p, models_per_provider)
                 if not found:
                     raise UnknownModelError(f"No models found for provider '{p}'")
-                self.models += found
+                selected += found
+        # Provider expansion can surface the same model more than once; keep the first occurrence.
+        seen = set()
+        self.models = [m for m in selected if not (m.id in seen or seen.add(m.id))]
 
     def api_key_for(self, model_id):
         """The API key you passed for this model's provider, or None."""
         return self.provider_keys.get(model_id.split("/", 1)[0])
 
     def _reject_reason(self, m, in_tokens, limits):
+        if not m.context_length_known:
+            return f"context length unknown (need {in_tokens + limits.output_tokens} tokens)"
         if m.context_length < in_tokens + limits.output_tokens:
             return f"context {m.context_length} < {in_tokens + limits.output_tokens} tokens"
         if m.max_output_tokens is not None and m.max_output_tokens < limits.output_tokens:
